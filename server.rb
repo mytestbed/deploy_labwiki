@@ -18,21 +18,26 @@ post '/payload' do
   branch = push["ref"].split('/').last
   repo = push["repository"]["name"]
 
-  Dir.chdir("/var/lib/labwiki/labwiki") do
-    if repo =~ /plugin/
-      Dir.chdir("/var/lib/labwiki/labwiki/plugins/#{repo}") { update_repo(branch, new_commit_id) }
-    else
-      update_repo(branch, new_commit_id)
+
+  EM.defer do
+    Dir.chdir("/var/lib/labwiki/labwiki") do
+      if repo =~ /plugin/
+        Dir.chdir("/var/lib/labwiki/labwiki/plugins/#{repo}") { update_repo(branch, new_commit_id) }
+      else
+        update_repo(branch, new_commit_id)
+      end
+
+      Bundler.with_clean_env do
+        # Bundle update
+        system("bundle update")
+        # Restart
+        system("bundle exec rake stop")
+        system("bundle exec rake start")
+      end
     end
 
-    Bundler.with_clean_env do
-      # Bundle update
-      system("bundle update")
-      # Restart
-      system("bundle exec rake stop")
-      system("bundle exec rake start")
-    end
+    puts "Deployed #{repo} with #{new_commit_id} at #{Time.now.to_s}"
   end
 
-  puts "Deployed #{repo} with #{new_commit_id} at #{Time.now.to_s}"
+  "Received #{repo} : #{new_commit_id}"
 end
