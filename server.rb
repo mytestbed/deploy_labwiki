@@ -18,6 +18,10 @@ post '/payload' do
   branch = push["ref"].split('/').last
   repo = push["repository"]["name"]
 
+  if branch != 'master'
+    return "IGNORE branch '#{branch}'. Received #{repo} : #{new_commit_id}"
+  end
+
 
   EM.defer do
     Dir.chdir("/var/lib/labwiki/labwiki") do
